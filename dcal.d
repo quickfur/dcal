@@ -83,19 +83,22 @@ static assert(isDateRange!(typeof(datesInYear(1))));
 
 
 /**
- * Chunks an input range by the given element attribute.
+ * Chunks an input range by equivalent elements.
  *
  * This function takes an input range, and splits it up into subranges that
- * contain elements that share the same value of a given attribute. This
- * attribute is defined by the compile-time parameter attrFun, which maps an
- * element of the input range to any value type that can be compared with ==.
+ * contain equivalent adjacent elements, where equivalence is defined by having
+ * the same value of attrFun(e) for each element e.
  *
- * The resulting range will contain subranges that contain adjacent elements
- * from the original range that map to the same value.
+ * Note that equivalent elements separated by an intervening non-equivalent
+ * element will appear in separate subranges; this function only considers
+ * adjacent equivalence.
+ *
+ * This is similar to std.algorithm.group, but the latter can't be used when
+ * the individual elements in each group must be iterable in the result.
  *
  * Parameters:
- *  attrFun = A function that maps each element to the attribute to be
- *      grouped by.
+ *  attrFun = The function for determining equivalence. The return value must
+ *      be comparable using ==.
  *  r = The range to be chunked.
  *
  * Returns: a range of ranges in which all elements in a given subrange share
@@ -150,6 +153,7 @@ auto chunkBy(alias attrFun, Range)(Range r)
     return ChunkBy(r);
 }
 
+///
 unittest {
     auto range = [
         [1, 1],
@@ -195,18 +199,19 @@ unittest {
 auto byMonth(InputRange)(InputRange dates)
     if (isDateRange!InputRange)
 {
-    static struct ByMonth {
-        private Date curDate;
-        this(InputRange range) {
-            empty = range.empty;
-        }
-        bool empty;
-        auto front() {
-            struct MonthlyDates {
-            }
-        }
-    }
-    return ByMonth(dates);
+    return chunkBy!"a.month()"(dates);
+}
+
+unittest {
+    auto months = datesInYear(2013).byMonth();
+    int month = 1;
+    do {
+        assert(!months.empty);
+        assert(months.front.front == Date(2013, month, 1));
+        months.popFront();
+    } while (++month <= 12);
+
+    assert(months.empty);
 }
 
 
@@ -218,7 +223,49 @@ auto byMonth(InputRange)(InputRange dates)
 auto byWeek(InputRange)(InputRange dates)
     if (isDateRange!InputRange)
 {
-    // TBD
+    static struct ByWeek {
+        InputRange r;
+        @property bool empty() { return r.empty; }
+        @property auto front() {
+            return until!((Date a) => a.dayOfWeek == DayOfWeek.sat)
+                         (r, OpenRight.no);
+        }
+        void popFront() {
+            assert(!r.empty());
+            r.popFront();
+            while (!r.empty && r.front.dayOfWeek != DayOfWeek.sun)
+                r.popFront();
+        }
+    }
+    return ByWeek(dates);
+}
+
+unittest {
+    auto weeks = datesInYear(2013).byWeek();
+    assert(!weeks.empty);
+    assert(equal(weeks.front, [
+        Date(2013, 1, 1),   // tue
+        Date(2013, 1, 2),   // wed
+        Date(2013, 1, 3),   // thu
+        Date(2013, 1, 4),   // fri
+        Date(2013, 1, 5),   // sat
+    ]));
+    weeks.popFront();
+
+    assert(!weeks.empty);
+    assert(equal(weeks.front, [
+        Date(2013, 1, 6),   // sun
+        Date(2013, 1, 7),   // mon
+        Date(2013, 1, 8),   // tue
+        Date(2013, 1, 9),   // wed
+        Date(2013, 1, 10),  // thu
+        Date(2013, 1, 11),  // fri
+        Date(2013, 1, 12),  // sat
+    ]));
+    weeks.popFront();
+
+    assert(!weeks.empty);
+    assert(weeks.front.front == Date(2013,1,13));
 }
 
 int main(string[] args) {
