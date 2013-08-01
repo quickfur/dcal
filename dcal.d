@@ -11,6 +11,7 @@ import std.datetime;
 import std.functional;
 import std.range;
 import std.stdio;
+import std.string;
 
 
 /**
@@ -266,6 +267,69 @@ unittest {
 
     assert(!weeks.empty);
     assert(weeks.front.front == Date(2013,1,13));
+}
+
+
+/**
+ * Formats a range of weeks into a range of strings.
+ *
+ * Each day is formatted into the digit representation of the day of the month,
+ * padded with spaces to fill up 3 characters.
+ */
+auto formatWeek(Range)(Range weeks)
+    if (isInputRange!Range && isInputRange!(ElementType!Range) &&
+        is(ElementType!(ElementType!Range) == Date))
+{
+    enum ColsPerDay = 3;
+
+    struct WeekStrings {
+        Range r;
+        @property bool empty() { return r.empty; }
+        string front() {
+            auto buf = appender!string();
+
+            // Insert enough filler to align the first day with its respective
+            // day-of-week.
+            assert(!r.front.empty);
+            auto startDay = r.front.front.dayOfWeek;
+            repeat(' ').take(ColsPerDay * startDay)
+                       .copy(buf);
+
+            // Format each day into its own cell and append to target string.
+            string[] days = map!((Date d) => " %2d".format(d.day))(r.front)
+                           .array;
+            assert(days.length <= 7 - startDay);
+            days.copy(buf);
+
+            // Insert more filler at the end to fill up the remainder of the
+            // week, if it's a short week (e.g. at the end of the month).
+            if (days.length < 7 - startDay)
+                repeat(' ').take(ColsPerDay * (7 - startDay - days.length))
+                           .copy(buf);
+
+            return buf.data;
+        }
+        void popFront() {
+            r.popFront();
+        }
+    }
+    return WeekStrings(weeks);
+}
+
+unittest {
+    auto jan2013 = datesInYear(2013)
+        .byMonth().front  // pick January 2013 for testing purposes
+        .byWeek()
+        .formatWeek()
+        .join("\n");
+
+    assert(jan2013 ==
+        "        1  2  3  4  5\n"~
+        "  6  7  8  9 10 11 12\n"~
+        " 13 14 15 16 17 18 19\n"~
+        " 20 21 22 23 24 25 26\n"~
+        " 27 28 29 30 31      "
+    );
 }
 
 int main(string[] args) {
