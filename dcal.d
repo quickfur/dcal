@@ -510,9 +510,9 @@ auto pasteBlocks(Range)(Range ror, int sepWidth)
 unittest {
     auto row = datesInYear(2013).byMonth().take(3)
               .formatMonths()
-              .pasteBlocks(3);
-    //writeln(row);
-    writeln(row.take(10));
+              .array()
+              .pasteBlocks(1);
+    writeln(row.join("\n"));
 }
 
 
