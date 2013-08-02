@@ -270,22 +270,35 @@ unittest {
 }
 
 
+/// The number of columns per day in the formatted output.
+enum ColsPerDay = 3;
+
+/// The number of columns per week in the formatted output.
+enum ColsPerWeek = 7 * ColsPerDay;
+
+
 /**
  * Formats a range of weeks into a range of strings.
  *
  * Each day is formatted into the digit representation of the day of the month,
  * padded with spaces to fill up 3 characters.
+ *
+ * Parameters:
+ *  weeks = A range of ranges of Dates, each inner range representing
+ *          consecutive dates in a week.
  */
 auto formatWeek(Range)(Range weeks)
     if (isInputRange!Range && isInputRange!(ElementType!Range) &&
         is(ElementType!(ElementType!Range) == Date))
 {
-    enum ColsPerDay = 3;
-
     struct WeekStrings {
         Range r;
         @property bool empty() { return r.empty; }
-        string front() {
+
+        string front()
+        out(s) { assert(s.length == ColsPerWeek); }
+        body
+        {
             auto buf = appender!string();
 
             // Insert enough filler to align the first day with its respective
@@ -309,6 +322,7 @@ auto formatWeek(Range)(Range weeks)
 
             return buf.data;
         }
+
         void popFront() {
             r.popFront();
         }
@@ -332,6 +346,67 @@ unittest {
     );
 }
 
+
+/**
+ * Formats the name of a month centered on ColsPerWeek.
+ */
+string monthTitle(Month month) {
+    static immutable string[] monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    static assert(monthNames.length == 12);
+
+    // Determine how many spaces before and after the month name we need to
+    // center it over the formatted weeks in the month
+    auto name = monthNames[month - 1];
+    assert(name.length < ColsPerWeek);
+    auto before = (ColsPerWeek - name.length) / 2;
+    auto after = ColsPerWeek - name.length - before;
+
+    return to!string(repeat(' ').take(before).array ~ name ~
+                     repeat(' ').take(after).array);
+}
+
+unittest {
+    assert(monthTitle(Month.jan).length == ColsPerWeek);
+}
+
+
+/**
+ * Formats a month.
+ * Parameters:
+ *  monthDays = A range of Dates representing consecutive days in a month.
+ * Returns: a range of strings representing each line of the formatted month.
+ */
+auto formatMonth(Range)(Range monthDays)
+    if (isInputRange!Range && is(ElementType!Range == Date))
+{
+    assert(!monthDays.empty);
+    assert(monthDays.front.day == 1);
+
+    return chain(
+        [ monthTitle(monthDays.front.month) ],
+        monthDays.byWeek().formatWeek());
+}
+
+unittest {
+    auto monthFmt = datesInYear(2013)
+        .byMonth().front    // Pick January as a test case
+        .formatMonth()
+        .join("\n");
+
+    assert(monthFmt ==
+        "       January       \n"~
+        "        1  2  3  4  5\n"~
+        "  6  7  8  9 10 11 12\n"~
+        " 13 14 15 16 17 18 19\n"~
+        " 20 21 22 23 24 25 26\n"~
+        " 27 28 29 30 31      "
+    );
+}
+
+
 int main(string[] args) {
     // This is as simple as it gets: parse the year from the command-line:
     if (args.length < 2) {
@@ -342,7 +417,9 @@ int main(string[] args) {
 
     // Then generate the calendar, which returns a range of lines to be
     // printed out.
-    writeln(datesInYear(year));
+    foreach (month; datesInYear(year).byMonth()) {
+        writeln(formatMonth(month).join("\n"));
+    }
 
     return 0;
 }
