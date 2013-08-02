@@ -20,7 +20,7 @@ import std.string;
 
 
 /**
- * Returns: a string containing exactly n spaces.
+ * Returns: A string containing exactly n spaces.
  */
 string spaces(size_t n) {
     return repeat(' ').take(n).array.to!string;
@@ -28,7 +28,7 @@ string spaces(size_t n) {
 
 
 /**
- * Returns: a range of dates in a given year.
+ * Returns: A range of dates in a given year.
  */
 auto datesInYear(int year) {
     static struct DateRange {
@@ -124,7 +124,7 @@ static assert(isDateRange!(typeof(datesInYear(1))));
  *      be comparable using ==.
  *  r = The range to be chunked.
  *
- * Returns: a range of ranges in which all elements in a given subrange share
+ * Returns: A range of ranges in which all elements in a given subrange share
  * the same attribute with each other.
  */
 auto chunkBy(alias attrFun, Range)(Range r)
@@ -224,7 +224,7 @@ unittest {
 
 /**
  * Chunks a given input range of dates by month.
- * Returns: a range of ranges, each subrange of which contains dates for the
+ * Returns: A range of ranges, each subrange of which contains dates for the
  * same month.
  */
 auto byMonth(InputRange)(InputRange dates)
@@ -248,8 +248,8 @@ unittest {
 
 /**
  * Chunks a given input range of dates by week.
- * Returns: a range of ranges, each subrange of which contains dates for the
- * same week.
+ * Returns: A range of ranges, each subrange of which contains dates for the
+ * same week. Note that weeks begin on Sunday and end on Saturday.
  */
 auto byWeek(InputRange)(InputRange dates)
     if (isDateRange!InputRange)
@@ -476,6 +476,8 @@ auto pasteBlocks(Range)(Range ror, int sepWidth)
             sep = _sep;
             _empty = ror.empty;
 
+            // Store the widths of each column so that we can insert fillers if
+            // one of the subranges run out of data prematurely.
             foreach (r; ror.save) {
                 colWidths ~= r.empty ? 0 : r.front.length;
             }
@@ -484,19 +486,27 @@ auto pasteBlocks(Range)(Range ror, int sepWidth)
         @property bool empty() { return _empty; }
 
         @property auto front() {
-            return zip(ror.save, colWidths)
+            return
+                // Iterate over ror and colWidths simultaneously
+                zip(ror.save, colWidths)
+
+                // Map each subrange to its front element, or empty fillers if
+                // it's already empty.
                 .map!((a) => a[0].empty ? spaces(a[1]) : a[0].front)
+
+                // Join them together to form a line
                 .join(sep);
         }
 
+        /// Pops an element off each subrange.
         void popFront() {
             assert(!empty);
-            _empty = true;
+            _empty = true;  // assume no more data after popping (we're lazy)
             foreach (ref r; ror) {
                 if (!r.empty) {
                     r.popFront();
                     if (!r.empty)
-                        _empty = false;
+                        _empty = false; // well, there's still data after all
                 }
             }
         }
@@ -508,6 +518,7 @@ auto pasteBlocks(Range)(Range ror, int sepWidth)
 }
 
 unittest {
+    // Make a beautiful, beautiful row of months. How's that for a unittest? :)
     auto row = datesInYear(2013).byMonth().take(3)
               .formatMonths()
               .array()
