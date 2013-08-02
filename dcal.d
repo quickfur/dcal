@@ -511,54 +511,54 @@ unittest {
     auto row = datesInYear(2013).byMonth().take(3)
               .formatMonths()
               .array()
-              .pasteBlocks(1);
-    writeln(row.join("\n"));
+              .pasteBlocks(1)
+              .join("\n");
+    assert(row ==
+        "       January              February                March        \n"~
+        "        1  2  3  4  5                  1  2                  1  2\n"~
+        "  6  7  8  9 10 11 12   3  4  5  6  7  8  9   3  4  5  6  7  8  9\n"~
+        " 13 14 15 16 17 18 19  10 11 12 13 14 15 16  10 11 12 13 14 15 16\n"~
+        " 20 21 22 23 24 25 26  17 18 19 20 21 22 23  17 18 19 20 21 22 23\n"~
+        " 27 28 29 30 31        24 25 26 27 28        24 25 26 27 28 29 30\n"~
+        "                                             31                  "
+    );
 }
 
 
 /**
  * Formats a year.
  * Parameters:
- *  dates = An input range of Dates in the year.
+ *  year = Year to display calendar for.
  *  monthsPerRow = How many months to fit into a row in the output.
  * Returns: A range of strings representing the formatted year.
  */
 auto formatYear(int year, int monthsPerRow)
 {
+    enum colSpacing = 1;
+
     return
-        // Generate dates in the year
+        // Start by generating all dates for the given year
         datesInYear(year)
 
         // Group them by month
         .byMonth()
 
-        .take(monthsPerRow)
-        .map!((month) => month.formatMonth());
-
-/+
-        // Group months by the number of months to put in a single row
+        // Group the months into horizontal rows
         .chunks(monthsPerRow)
 
         // Format each row
-        .map!(
-            // By formatting each month in the row
-            (months) => months.map!((days) => days.formatMonth())
-                              // Then joining their respective lines together
-                              .frontTransversal()
-                              .joiner("\n")
-        )
+        .map!((r) =>
+                // By formatting each month
+                r.formatMonths()
+                 // Storing each month's formatting in a row buffer
+                 .array()
 
-        // Finally, glue all the rows together
-        .joiner;
-+/
-}
+                 // Horizontally pasting each respective month's lines together
+                 .pasteBlocks(colSpacing)
+                 .join("\n"))
 
-version(none)
-unittest {
-    auto r = formatYear(2013, 3);
-    pragma(msg, ElementType!(typeof(r)));
-    pragma(msg, ElementType!(ElementType!(typeof(r))));
-    writeln(r);
+        // Insert a blank line between each row
+        .join("\n\n");
 }
 
 
@@ -570,11 +570,9 @@ int main(string[] args) {
     }
     int year = to!int(args[1]);
 
-    // Then generate the calendar, which returns a range of lines to be
-    // printed out.
-    foreach (month; datesInYear(year).byMonth()) {
-        writeln(formatMonth(month).join("\n"));
-    }
+    // Print the calender
+    enum MonthsPerRow = 3;
+    writeln(formatYear(year, MonthsPerRow));
 
     return 0;
 }
