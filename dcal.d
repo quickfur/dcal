@@ -1,8 +1,13 @@
 /**
- * D calendar: an example of how using component-style programming with ranges
- * simplifies a complex task into manageable pieces. The task is, given a year,
- * to produce a range of lines representing a nicely laid-out calendar of that
- * year.
+ * D calendar
+ *
+ * An example of how using component-style programming with ranges simplifies a
+ * complex task into manageable pieces. The task is, given a year, to produce a
+ * range of lines representing a nicely laid-out calendar of that year.
+ *
+ * This example shows how something is complex as calendar layout can be
+ * written in a clear, readable way that allows individual components to be
+ * reused.
  */
 
 import std.algorithm;
@@ -10,8 +15,16 @@ import std.conv;
 import std.datetime;
 import std.functional;
 import std.range;
-import std.stdio;
+import std.stdio : writeln, writefln, stderr;
 import std.string;
+
+
+/**
+ * Returns: a string containing exactly n spaces.
+ */
+string spaces(size_t n) {
+    return repeat(' ').take(n).array.to!string;
+}
 
 
 /**
@@ -20,6 +33,7 @@ import std.string;
 auto datesInYear(int year) {
     static struct DateRange {
         private int year;   /// so that we know when to stop
+
         this(int _year) {
             year = _year;
             front = Date(year, 1, 1);
@@ -33,8 +47,16 @@ auto datesInYear(int year) {
 
         /// Generate the next date in the year.
         void popFront() { front += dur!"days"(1); }
+
+        /// Provide forward range interface
+        @property DateRange save() {
+            DateRange r;
+            r.year = year;
+            r.front = front;
+            return r;
+        }
     }
-    static assert(isInputRange!DateRange);
+    static assert(isForwardRange!DateRange);
 
     return DateRange(year);
 }
@@ -149,6 +171,14 @@ auto chunkBy(alias attrFun, Range)(Range r)
             }
             if (!r.empty)
                 lastAttr = attr(r.front);
+        }
+        static if (isForwardRange!Range) {
+            @property ChunkBy save() {
+                ChunkBy copy;
+                copy.r = r.save;
+                copy.lastAttr = lastAttr;
+                return copy;
+            }
         }
     }
     return ChunkBy(r);
@@ -305,8 +335,7 @@ auto formatWeek(Range)(Range weeks)
             // day-of-week.
             assert(!r.front.empty);
             auto startDay = r.front.front.dayOfWeek;
-            repeat(' ').take(ColsPerDay * startDay)
-                       .copy(buf);
+            buf.put(spaces(ColsPerDay * startDay));
 
             // Format each day into its own cell and append to target string.
             string[] days = map!((Date d) => " %2d".format(d.day))(r.front)
@@ -317,8 +346,7 @@ auto formatWeek(Range)(Range weeks)
             // Insert more filler at the end to fill up the remainder of the
             // week, if it's a short week (e.g. at the end of the month).
             if (days.length < 7 - startDay)
-                repeat(' ').take(ColsPerDay * (7 - startDay - days.length))
-                           .copy(buf);
+                buf.put(spaces(ColsPerDay * (7 - startDay - days.length)));
 
             return buf.data;
         }
@@ -364,8 +392,7 @@ string monthTitle(Month month) {
     auto before = (ColsPerWeek - name.length) / 2;
     auto after = ColsPerWeek - name.length - before;
 
-    return to!string(repeat(' ').take(before).array ~ name ~
-                     repeat(' ').take(after).array);
+    return to!string(spaces(before) ~ name ~ spaces(after));
 }
 
 unittest {
@@ -377,7 +404,7 @@ unittest {
  * Formats a month.
  * Parameters:
  *  monthDays = A range of Dates representing consecutive days in a month.
- * Returns: a range of strings representing each line of the formatted month.
+ * Returns: A range of strings representing each line of the formatted month.
  */
 auto formatMonth(Range)(Range monthDays)
     if (isInputRange!Range && is(ElementType!Range == Date))
@@ -404,6 +431,134 @@ unittest {
         " 20 21 22 23 24 25 26\n"~
         " 27 28 29 30 31      "
     );
+}
+
+
+/**
+ * Formats a range of months.
+ * Parameters:
+ *  months = A range of ranges, each inner range is a range of Dates in a
+ *      month.
+ * Returns:
+ *  A range of ranges of formatted lines for each month.
+ */
+auto formatMonths(Range)(Range months)
+    if (isInputRange!Range && is(ElementType!(ElementType!Range) == Date))
+{
+    return months.map!((month) => month.formatMonth());
+}
+
+
+/**
+ * Horizontally pastes a forward range of rectangular blocks of characters.
+ *
+ * Each rectangular block is represented by a range of fixed-width strings. If
+ * some blocks are longer than others, the shorter blocks are padded with
+ * spaces at the bottom.
+ *
+ * Parameters:
+ *  ror = A range of of ranges of fixed-width strings.
+ *  sepWidth = Number of spaces to insert between each month.
+ * Returns:
+ *  A range of ranges of formatted lines for each month.
+ */
+auto pasteBlocks(Range)(Range ror, int sepWidth)
+    if (isForwardRange!Range && is(ElementType!(ElementType!Range) : string))
+{
+    struct Lines {
+        Range  ror;
+        string sep;
+        size_t[] colWidths;
+        bool   _empty;
+
+        this(Range _ror, string _sep) {
+            ror = _ror;
+            sep = _sep;
+            _empty = ror.empty;
+
+            foreach (r; ror.save) {
+                colWidths ~= r.empty ? 0 : r.front.length;
+            }
+        }
+
+        @property bool empty() { return _empty; }
+
+        @property auto front() {
+            return zip(ror.save, colWidths)
+                .map!((a) => a[0].empty ? spaces(a[1]) : a[0].front)
+                .join(sep);
+        }
+
+        void popFront() {
+            assert(!empty);
+            _empty = true;
+            foreach (ref r; ror) {
+                if (!r.empty) {
+                    r.popFront();
+                    if (!r.empty)
+                        _empty = false;
+                }
+            }
+        }
+    }
+    static assert(isInputRange!Lines);
+
+    string separator = spaces(sepWidth);
+    return Lines(ror, separator);
+}
+
+unittest {
+    auto row = datesInYear(2013).byMonth().take(3)
+              .formatMonths()
+              .pasteBlocks(3);
+    //writeln(row);
+    writeln(row.take(10));
+}
+
+
+/**
+ * Formats a year.
+ * Parameters:
+ *  dates = An input range of Dates in the year.
+ *  monthsPerRow = How many months to fit into a row in the output.
+ * Returns: A range of strings representing the formatted year.
+ */
+auto formatYear(int year, int monthsPerRow)
+{
+    return
+        // Generate dates in the year
+        datesInYear(year)
+
+        // Group them by month
+        .byMonth()
+
+        .take(monthsPerRow)
+        .map!((month) => month.formatMonth());
+
+/+
+        // Group months by the number of months to put in a single row
+        .chunks(monthsPerRow)
+
+        // Format each row
+        .map!(
+            // By formatting each month in the row
+            (months) => months.map!((days) => days.formatMonth())
+                              // Then joining their respective lines together
+                              .frontTransversal()
+                              .joiner("\n")
+        )
+
+        // Finally, glue all the rows together
+        .joiner;
++/
+}
+
+version(none)
+unittest {
+    auto r = formatYear(2013, 3);
+    pragma(msg, ElementType!(typeof(r)));
+    pragma(msg, ElementType!(ElementType!(typeof(r))));
+    writeln(r);
 }
 
 
