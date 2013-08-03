@@ -523,11 +523,18 @@ static if (__VERSION__ < 2064L) {
             @property bool empty() { return r.empty; }
             @property auto front() { return r.save.take(n); }
             void popFront() {
-                foreach (_; 0..n)
+                int count = n;
+                while (count > 0 && !r.empty)
                     r.popFront();
             }
         }
         return Chunks(r, n);
+    }
+
+    unittest {
+        auto r = [1, 2, 3, 4, 5, 6, 7];
+        auto c = r.chunks(3);
+        assert(c.equals([[1,2,3],[4,5,6],[7]]));
     }
 }
 
