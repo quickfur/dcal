@@ -510,6 +510,28 @@ unittest {
 }
 
 
+// The following block is a simple replacement of std.range.chunks to work
+// around a limitation in its implementation in 2.063 and earlier, that does
+// not allow it to be used with a non-sliceable range. This limitation has been
+// lifted in 2.064, so this block is only compiled for 2.063 or earlier.
+static if (__VERSION__ < 2064L) {
+    auto chunks(Range)(Range r, size_t n) {
+        struct Chunks {
+            Range r;
+            size_t n;
+
+            @property bool empty() { return r.empty; }
+            @property auto front() { return r.save.take(n); }
+            void popFront() {
+                foreach (_; 0..n)
+                    r.popFront();
+            }
+        }
+        return Chunks(r, n);
+    }
+}
+
+
 /**
  * Formats a year.
  * Parameters:
