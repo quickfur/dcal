@@ -31,34 +31,9 @@ string spaces(size_t n) {
  * Returns: A range of dates in a given year.
  */
 auto datesInYear(int year) {
-    static struct DateRange {
-        private int year;   /// so that we know when to stop
-
-        this(int _year) {
-            year = _year;
-            front = Date(year, 1, 1);
-        }
-
-        /// Generate dates only up to the end of the starting year
-        @property bool empty() { return front.year() > year; }
-
-        /// Current date
-        Date front;
-
-        /// Generate the next date in the year.
-        void popFront() { front += dur!"days"(1); }
-
-        /// Provide forward range interface
-        @property DateRange save() {
-            DateRange r;
-            r.year = year;
-            r.front = front;
-            return r;
-        }
-    }
-    static assert(isForwardRange!DateRange);
-
-    return DateRange(year);
+    return Date(year, 1, 1)
+        .recurrence!((a,n) => a[n-1] + dur!"days"(1))
+        .until!(a => a.year > year);
 }
 
 unittest {
@@ -174,9 +149,8 @@ auto chunkBy(alias attrFun, Range)(Range r)
         }
         static if (isForwardRange!Range) {
             @property ChunkBy save() {
-                ChunkBy copy;
+                ChunkBy copy = this;
                 copy.r = r.save;
-                copy.lastAttr = lastAttr;
                 return copy;
             }
         }
@@ -262,7 +236,7 @@ auto byWeek(InputRange)(InputRange dates)
                          (r, OpenRight.no);
         }
         void popFront() {
-            assert(!r.empty());
+            assert(!r.empty);
             r.popFront();
             while (!r.empty && r.front.dayOfWeek != DayOfWeek.sun)
                 r.popFront();
