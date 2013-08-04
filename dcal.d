@@ -523,7 +523,7 @@ static if (__VERSION__ < 2064L) {
             @property bool empty() { return r.empty; }
             @property auto front() { return r.save.take(n); }
             void popFront() {
-                int count = n;
+                size_t count = n;
                 while (count > 0 && !r.empty)
                     r.popFront();
             }
@@ -534,7 +534,7 @@ static if (__VERSION__ < 2064L) {
     unittest {
         auto r = [1, 2, 3, 4, 5, 6, 7];
         auto c = r.chunks(3);
-        assert(c.equals([[1,2,3],[4,5,6],[7]]));
+        assert(c.equal([[1,2,3],[4,5,6],[7]]));
     }
 }
 
