@@ -22,15 +22,15 @@ import std.string;
 /**
  * Returns: A string containing exactly n spaces.
  */
-string spaces(size_t n) {
-    return repeat(' ').take(n).array.to!string;
+string spaces(size_t n) pure nothrow {
+    return std.array.replicate(" ", n);
 }
 
 
 /**
  * Returns: A range of dates in a given year.
  */
-auto datesInYear(int year) {
+auto datesInYear(int year) pure {
     return Date(year, 1, 1)
         .recurrence!((a,n) => a[n-1] + dur!"days"(1))
         .until!(a => a.year > year);
@@ -204,7 +204,7 @@ unittest {
 auto byMonth(InputRange)(InputRange dates)
     if (isDateRange!InputRange)
 {
-    return chunkBy!"a.month()"(dates);
+    return dates.chunkBy!"a.month()";
 }
 
 unittest {
@@ -366,7 +366,7 @@ string monthTitle(Month month) {
     auto before = (ColsPerWeek - name.length) / 2;
     auto after = ColsPerWeek - name.length - before;
 
-    return to!string(spaces(before) ~ name ~ spaces(after));
+    return spaces(before) ~ name ~ spaces(after);
 }
 
 unittest {
@@ -382,10 +382,10 @@ unittest {
  */
 auto formatMonth(Range)(Range monthDays)
     if (isInputRange!Range && is(ElementType!Range == Date))
-{
+in {
     assert(!monthDays.empty);
     assert(monthDays.front.day == 1);
-
+} body {
     return chain(
         [ monthTitle(monthDays.front.month) ],
         monthDays.byWeek().formatWeek());
@@ -419,7 +419,7 @@ unittest {
 auto formatMonths(Range)(Range months)
     if (isInputRange!Range && is(ElementType!(ElementType!Range) == Date))
 {
-    return months.map!((month) => month.formatMonth());
+    return months.map!formatMonth;
 }
 
 
@@ -466,7 +466,7 @@ auto pasteBlocks(Range)(Range ror, int sepWidth)
 
                 // Map each subrange to its front element, or empty fillers if
                 // it's already empty.
-                .map!((a) => a[0].empty ? spaces(a[1]) : a[0].front)
+                .map!(a => a[0].empty ? spaces(a[1]) : a[0].front)
 
                 // Join them together to form a line
                 .join(sep);
@@ -561,7 +561,7 @@ auto formatYear(int year, int monthsPerRow)
         .chunks(monthsPerRow)
 
         // Format each row
-        .map!((r) =>
+        .map!(r =>
                 // By formatting each month
                 r.formatMonths()
                  // Storing each month's formatting in a row buffer
