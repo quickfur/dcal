@@ -225,7 +225,7 @@ unittest {
  * Returns: A range of ranges, each subrange of which contains dates for the
  * same week. Note that weeks begin on Sunday and end on Saturday.
  */
-auto byWeek(InputRange)(InputRange dates)
+auto byWeek(InputRange)(InputRange dates) pure nothrow
     if (isDateRange!InputRange)
 {
     static struct ByWeek {
@@ -291,7 +291,7 @@ enum ColsPerWeek = 7 * ColsPerDay;
  *  weeks = A range of ranges of Dates, each inner range representing
  *          consecutive dates in a week.
  */
-auto formatWeek(Range)(Range weeks)
+auto formatWeek(Range)(Range weeks) pure nothrow
     if (isInputRange!Range && isInputRange!(ElementType!Range) &&
         is(ElementType!(ElementType!Range) == Date))
 {
@@ -352,7 +352,7 @@ unittest {
 /**
  * Formats the name of a month centered on ColsPerWeek.
  */
-string monthTitle(Month month) {
+string monthTitle(Month month) pure nothrow {
     static immutable string[] monthNames = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
@@ -416,7 +416,7 @@ unittest {
  * Returns:
  *  A range of ranges of formatted lines for each month.
  */
-auto formatMonths(Range)(Range months)
+auto formatMonths(Range)(Range months) pure nothrow
     if (isInputRange!Range && is(ElementType!(ElementType!Range) == Date))
 {
     return months.map!formatMonth;
