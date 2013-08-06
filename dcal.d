@@ -105,8 +105,7 @@ static assert(isDateRange!(typeof(datesInYear(1))));
 auto chunkBy(alias attrFun, Range)(Range r)
     if (isInputRange!Range &&
         is(typeof(
-            unaryFun!attrFun(ElementType!Range.init) ==
-            unaryFun!attrFun(ElementType!Range.init)
+            attrFun(ElementType!Range.init) == attrFun(ElementType!Range.init)
         ))
     )
 {
@@ -170,7 +169,7 @@ unittest {
         [3, 3]
     ];
 
-    auto byX = chunkBy!"a[0]"(range);
+    auto byX = chunkBy!(a => a[0])(range);
     auto expected1 = [
         [[1, 1], [1, 1], [1, 2]],
         [[2, 2], [2, 3], [2, 3]],
@@ -182,7 +181,7 @@ unittest {
         expected1.popFront();
     }
 
-    auto byY = chunkBy!"a[1]"(range);
+    auto byY = chunkBy!(a => a[1])(range);
     auto expected2 = [
         [[1, 1], [1, 1]],
         [[1, 2], [2, 2]],
@@ -204,7 +203,7 @@ unittest {
 auto byMonth(InputRange)(InputRange dates)
     if (isDateRange!InputRange)
 {
-    return dates.chunkBy!"a.month()";
+    return dates.chunkBy!(a => a.month());
 }
 
 unittest {
