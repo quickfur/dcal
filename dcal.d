@@ -523,7 +523,7 @@ static if (__VERSION__ < 2064L) {
             @property auto front() { return r.save.take(n); }
             void popFront() {
                 size_t count = n;
-                while (count > 0 && !r.empty)
+                while (count-- > 0 && !r.empty)
                     r.popFront();
             }
         }
