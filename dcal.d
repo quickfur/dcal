@@ -32,7 +32,7 @@ string spaces(size_t n) pure nothrow {
  */
 auto datesInYear(int year) pure {
     return Date(year, 1, 1)
-        .recurrence!((a,n) => a[n-1] + dur!"days"(1))
+        .recurrence!((a,n) => a[n-1] + 1.days)
         .until!(a => a.year > year);
 }
 
