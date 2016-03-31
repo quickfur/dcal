@@ -23,7 +23,8 @@ import std.string;
  * Returns: A string containing exactly n spaces.
  */
 string spaces(size_t n) pure nothrow {
-    return std.array.replicate(" ", n);
+    import std.array : replicate;
+    return replicate(" ", n);
 }
 
 
