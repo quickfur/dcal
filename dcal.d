@@ -375,7 +375,7 @@ unittest
 /**
  * Formats the name of a month centered on ColsPerWeek.
  */
-string monthTitle(Month month) pure nothrow
+string monthTitle()(Month month)
 {
     static immutable string[] monthNames = [
         "January", "February", "March", "April", "May", "June",
@@ -621,7 +621,7 @@ static if (__VERSION__ < 2064L)
  *  monthsPerRow = How many months to fit into a row in the output.
  * Returns: A range of strings representing the formatted year.
  */
-auto formatYear(int year, int monthsPerRow)
+auto formatYear()(int year, int monthsPerRow)
 {
     enum colSpacing = 1;
 
