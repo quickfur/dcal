@@ -620,13 +620,14 @@ auto formatYear(int year, int monthsPerRow)
 
 int main(string[] args)
 {
+    // Default year is the one obtained from the current system clock.
+    int year = (cast(Date) Clock.currTime).year;
+
     // This is as simple as it gets: parse the year from the command-line:
-    if (args.length < 2)
+    if (args.length == 2)
     {
-        stderr.writeln("Please specify year");
-        return 1;
+        year = to!int(args[1]);
     }
-    int year = to!int(args[1]);
 
     // Print the calender
     enum MonthsPerRow = 3;
