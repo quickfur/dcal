@@ -400,21 +400,32 @@ unittest
 
 
 /**
- * Returns: A single string containing the abbreviated names of the days of a
- * week, that can be used as a header to the weeks in a month.
+ * Compile-time helper function that creates a single string containing the
+ * abbreviated names of the days of a week, that can be used as a header to the
+ * weeks in a month.
+ *
+ * This string is formatted to align with ColsPerDay.
  */
-auto weekdaysHeader()()
+auto makeWeekdaysHeader()()
 {
-    static weekdayNames = [ "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" ];
+    auto weekdayNames = [ "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" ];
     return weekdayNames
         .map!(s => format(" %.*s", ColsPerDay, s))
         .join();
 }
 
+/**
+ * Header containing abbreviated names of a week, to be used as a header in
+ * each month.
+ *
+ * This string is computed at compile-time using D's CTFE feature.
+ */
+static weekdaysHeader = makeWeekdaysHeader();
+
 unittest
 {
-    assert(weekdaysHeader().length == ColsPerWeek);
-    assert(weekdaysHeader() == " Su Mo Tu We Th Fr Sa");
+    assert(weekdaysHeader.length == ColsPerWeek);
+    assert(weekdaysHeader == " Su Mo Tu We Th Fr Sa");
 }
 
 
