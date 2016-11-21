@@ -22,7 +22,8 @@ import std.string;
 /**
  * Returns: A string containing exactly n spaces.
  */
-string spaces(size_t n) pure nothrow {
+string spaces()(size_t n)
+{
     import std.array : replicate;
     return replicate(" ", n);
 }
@@ -31,13 +32,15 @@ string spaces(size_t n) pure nothrow {
 /**
  * Returns: A range of dates in a given year.
  */
-auto datesInYear(int year) pure {
+auto datesInYear()(int year)
+{
     return Date(year, 1, 1)
         .recurrence!((a,n) => a[n-1] + 1.days)
         .until!(a => a.year > year);
 }
 
-unittest {
+unittest
+{
     auto dates = datesInYear(2013);
     assert(!dates.empty);
     assert(dates.front == Date(2013, 1, 1));
@@ -59,7 +62,8 @@ unittest {
     assert(dates.front == Date(2013, 2, 1));
 }
 
-unittest {
+unittest
+{
     // Check length of year
     auto dates = datesInYear(2013);
     foreach (i; 0 .. 365) {
@@ -74,7 +78,8 @@ unittest {
  * Convenience template for verifying that a given range is an input range of
  * Dates.
  */
-template isDateRange(R) {
+template isDateRange(R)
+{
     enum isDateRange = isInputRange!R && is(ElementType!R : Date);
 }
 
@@ -113,42 +118,52 @@ auto chunkBy(alias attrFun, Range)(Range r)
     alias attr = unaryFun!attrFun;
     alias AttrType = typeof(attr(r.front));
 
-    static struct Chunk {
+    static struct Chunk
+    {
         private Range r;
         private AttrType curAttr;
-        @property bool empty() {
+        @property bool empty()
+        {
             return r.empty || !(curAttr == attr(r.front));
         }
         @property ElementType!Range front() { return r.front; }
-        void popFront() {
+        void popFront()
+        {
             assert(!r.empty);
             r.popFront();
         }
     }
 
-    static struct ChunkBy {
+    static struct ChunkBy
+    {
         private Range r;
         private AttrType lastAttr;
-        this(Range _r) {
+        this(Range _r)
+        {
             r = _r;
             if (!empty)
                 lastAttr = attr(r.front);
         }
         @property bool empty() { return r.empty; }
-        @property auto front() {
+        @property auto front()
+        {
             assert(!r.empty);
             return Chunk(r, lastAttr);
         }
-        void popFront() {
+        void popFront()
+        {
             assert(!r.empty);
-            while (!r.empty && attr(r.front) == lastAttr) {
+            while (!r.empty && attr(r.front) == lastAttr)
+            {
                 r.popFront();
             }
             if (!r.empty)
                 lastAttr = attr(r.front);
         }
-        static if (isForwardRange!Range) {
-            @property ChunkBy save() {
+        static if (isForwardRange!Range)
+        {
+            @property ChunkBy save()
+            {
                 ChunkBy copy = this;
                 copy.r = r.save;
                 return copy;
@@ -159,7 +174,8 @@ auto chunkBy(alias attrFun, Range)(Range r)
 }
 
 ///
-unittest {
+unittest
+{
     auto range = [
         [1, 1],
         [1, 1],
@@ -176,7 +192,8 @@ unittest {
         [[2, 2], [2, 3], [2, 3]],
         [[3, 3]]
     ];
-    foreach (e; byX) {
+    foreach (e; byX)
+    {
         assert(!expected1.empty);
         assert(e.equal(expected1.front));
         expected1.popFront();
@@ -188,7 +205,8 @@ unittest {
         [[1, 2], [2, 2]],
         [[2, 3], [2, 3], [3, 3]]
     ];
-    foreach (e; byY) {
+    foreach (e; byY)
+    {
         assert(!expected2.empty);
         assert(e.equal(expected2.front));
         expected2.popFront();
@@ -207,7 +225,8 @@ auto byMonth(InputRange)(InputRange dates)
     return dates.chunkBy!(a => a.month());
 }
 
-unittest {
+unittest
+{
     auto months = datesInYear(2013).byMonth();
     int month = 1;
     do {
@@ -225,17 +244,20 @@ unittest {
  * Returns: A range of ranges, each subrange of which contains dates for the
  * same week. Note that weeks begin on Sunday and end on Saturday.
  */
-auto byWeek(InputRange)(InputRange dates) pure nothrow
+auto byWeek(InputRange)(InputRange dates)
     if (isDateRange!InputRange)
 {
-    static struct ByWeek {
+    static struct ByWeek
+    {
         InputRange r;
         @property bool empty() { return r.empty; }
-        @property auto front() {
+        @property auto front()
+        {
             return until!((Date a) => a.dayOfWeek == DayOfWeek.sat)
                          (r, OpenRight.no);
         }
-        void popFront() {
+        void popFront()
+        {
             assert(!r.empty);
             r.popFront();
             while (!r.empty && r.front.dayOfWeek != DayOfWeek.sun)
@@ -245,7 +267,8 @@ auto byWeek(InputRange)(InputRange dates) pure nothrow
     return ByWeek(dates);
 }
 
-unittest {
+unittest
+{
     auto weeks = datesInYear(2013).byWeek();
     assert(!weeks.empty);
     assert(equal(weeks.front, [
@@ -295,7 +318,8 @@ auto formatWeek(Range)(Range weeks) pure nothrow
     if (isInputRange!Range && isInputRange!(ElementType!Range) &&
         is(ElementType!(ElementType!Range) == Date))
 {
-    struct WeekStrings {
+    struct WeekStrings
+    {
         Range r;
         @property bool empty() { return r.empty; }
 
@@ -325,14 +349,13 @@ auto formatWeek(Range)(Range weeks) pure nothrow
             return buf.data;
         }
 
-        void popFront() {
-            r.popFront();
-        }
+        void popFront() { r.popFront(); }
     }
     return WeekStrings(weeks);
 }
 
-unittest {
+unittest
+{
     auto jan2013 = datesInYear(2013)
         .byMonth().front  // pick January 2013 for testing purposes
         .byWeek()
@@ -352,7 +375,8 @@ unittest {
 /**
  * Formats the name of a month centered on ColsPerWeek.
  */
-string monthTitle(Month month) pure nothrow {
+string monthTitle(Month month) pure nothrow
+{
     static immutable string[] monthNames = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
@@ -369,7 +393,8 @@ string monthTitle(Month month) pure nothrow {
     return spaces(before) ~ name ~ spaces(after);
 }
 
-unittest {
+unittest
+{
     assert(monthTitle(Month.jan).length == ColsPerWeek);
 }
 
@@ -382,16 +407,20 @@ unittest {
  */
 auto formatMonth(Range)(Range monthDays)
     if (isInputRange!Range && is(ElementType!Range == Date))
-in {
+in
+{
     assert(!monthDays.empty);
     assert(monthDays.front.day == 1);
-} body {
+}
+body
+{
     return chain(
         [ monthTitle(monthDays.front.month) ],
         monthDays.byWeek().formatWeek());
 }
 
-unittest {
+unittest
+{
     auto monthFmt = datesInYear(2013)
         .byMonth().front    // Pick January as a test case
         .formatMonth()
@@ -439,27 +468,31 @@ auto formatMonths(Range)(Range months) pure nothrow
 auto pasteBlocks(Range)(Range ror, int sepWidth)
     if (isForwardRange!Range && is(ElementType!(ElementType!Range) : string))
 {
-    struct Lines {
+    struct Lines
+    {
         Range  ror;
         string sep;
         size_t[] colWidths;
         bool   _empty;
 
-        this(Range _ror, string _sep) {
+        this(Range _ror, string _sep)
+        {
             ror = _ror;
             sep = _sep;
             _empty = ror.empty;
 
             // Store the widths of each column so that we can insert fillers if
             // one of the subranges run out of data prematurely.
-            foreach (r; ror.save) {
+            foreach (r; ror.save)
+            {
                 colWidths ~= r.empty ? 0 : r.front.length;
             }
         }
 
         @property bool empty() { return _empty; }
 
-        @property auto front() {
+        @property auto front()
+        {
             return
                 // Iterate over ror and colWidths simultaneously
                 zip(ror.save, colWidths)
@@ -473,11 +506,14 @@ auto pasteBlocks(Range)(Range ror, int sepWidth)
         }
 
         /// Pops an element off each subrange.
-        void popFront() {
+        void popFront()
+        {
             assert(!empty);
             _empty = true;  // assume no more data after popping (we're lazy)
-            foreach (ref r; ror) {
-                if (!r.empty) {
+            foreach (ref r; ror)
+            {
+                if (!r.empty)
+                {
                     r.popFront();
                     if (!r.empty)
                         _empty = false; // well, there's still data after all
@@ -491,7 +527,8 @@ auto pasteBlocks(Range)(Range ror, int sepWidth)
     return Lines(ror, separator);
 }
 
-unittest {
+unittest
+{
     // Make a beautiful, beautiful row of months. How's that for a unittest? :)
     auto row = datesInYear(2013).byMonth().take(3)
               .formatMonths()
@@ -514,15 +551,19 @@ unittest {
 // around a limitation in its implementation in 2.063 and earlier, that does
 // not allow it to be used with a non-sliceable range. This limitation has been
 // lifted in 2.064, so this block is only compiled for 2.063 or earlier.
-static if (__VERSION__ < 2064L) {
-    auto chunks(Range)(Range r, size_t n) {
-        struct Chunks {
+static if (__VERSION__ < 2064L)
+{
+    auto chunks(Range)(Range r, size_t n)
+    {
+        struct Chunks
+        {
             Range r;
             size_t n;
 
             @property bool empty() { return r.empty; }
             @property auto front() { return r.save.take(n); }
-            void popFront() {
+            void popFront()
+            {
                 size_t count = n;
                 while (count-- > 0 && !r.empty)
                     r.popFront();
@@ -531,7 +572,8 @@ static if (__VERSION__ < 2064L) {
         return Chunks(r, n);
     }
 
-    unittest {
+    unittest
+    {
         auto r = [1, 2, 3, 4, 5, 6, 7];
         auto c = r.chunks(3);
         assert(c.equal([[1,2,3],[4,5,6],[7]]));
@@ -576,9 +618,11 @@ auto formatYear(int year, int monthsPerRow)
 }
 
 
-int main(string[] args) {
+int main(string[] args)
+{
     // This is as simple as it gets: parse the year from the command-line:
-    if (args.length < 2) {
+    if (args.length < 2)
+    {
         stderr.writeln("Please specify year");
         return 1;
     }
