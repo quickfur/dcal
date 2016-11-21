@@ -400,6 +400,25 @@ unittest
 
 
 /**
+ * Returns: A single string containing the abbreviated names of the days of a
+ * week, that can be used as a header to the weeks in a month.
+ */
+auto weekdaysHeader()()
+{
+    static weekdayNames = [ "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" ];
+    return weekdayNames
+        .map!(s => format(" %.*s", ColsPerDay, s))
+        .join();
+}
+
+unittest
+{
+    assert(weekdaysHeader().length == ColsPerWeek);
+    assert(weekdaysHeader() == " Su Mo Tu We Th Fr Sa");
+}
+
+
+/**
  * Formats a month.
  * Parameters:
  *  monthDays = A range of Dates representing consecutive days in a month.
@@ -416,6 +435,7 @@ body
 {
     return chain(
         [ monthTitle(monthDays.front.month) ],
+        [ weekdaysHeader ],
         monthDays.byWeek().formatWeek());
 }
 
@@ -428,6 +448,7 @@ unittest
 
     assert(monthFmt ==
         "       January       \n"~
+        " Su Mo Tu We Th Fr Sa\n"~
         "        1  2  3  4  5\n"~
         "  6  7  8  9 10 11 12\n"~
         " 13 14 15 16 17 18 19\n"~
@@ -537,6 +558,7 @@ unittest
               .join("\n");
     assert(row ==
         "       January              February                March        \n"~
+        " Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa\n"~
         "        1  2  3  4  5                  1  2                  1  2\n"~
         "  6  7  8  9 10 11 12   3  4  5  6  7  8  9   3  4  5  6  7  8  9\n"~
         " 13 14 15 16 17 18 19  10 11 12 13 14 15 16  10 11 12 13 14 15 16\n"~
