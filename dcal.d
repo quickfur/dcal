@@ -441,6 +441,7 @@ unittest
  * Formats a month.
  * Parameters:
  *  monthDays = A range of Dates representing consecutive days in a month.
+ *  year = Optional year to include in the month header.
  * Returns: A range of strings representing each line of the formatted month.
  */
 auto formatMonth(Range)(Range monthDays, Nullable!int year = Nullable!int.init)
@@ -713,6 +714,18 @@ int printUsage()
     return 1;
 }
 
+/**
+ * Parse command-line arguments.
+ *
+ * Params:
+ *  args = Arguments passed to main().
+ *  year = The selected year. Defaults to the current year (according to system
+ *      clock).
+ *  month = The selected month (1..12), or 0 if the entire year should be
+ *      displayed.
+ *
+ * Throws: Exception if could not parse the given arguments.
+ */
 void parseArgs(string[] args, out int year, out int month)
 {
     // Default year is the one obtained from the current system clock.
@@ -734,7 +747,11 @@ void parseArgs(string[] args, out int year, out int month)
             year = to!int(args[1]);
             month = parseMonth(args[2]);
             if (month == 0)
+            {
                 month = args[2].to!int; // numerical month
+                if (month < 1 || month > 12)
+                    throw new Exception("Invalid month");
+            }
         }
         else
         {
