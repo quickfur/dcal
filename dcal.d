@@ -17,6 +17,7 @@ import std.functional;
 import std.range;
 import std.stdio : writeln, writefln, stderr;
 import std.string;
+import std.typecons : Nullable, nullable;
 
 
 /**
@@ -370,21 +371,27 @@ unittest
     );
 }
 
+/**
+ * Month names.
+ */
+static immutable string[] monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+];
+static assert(monthNames.length == 12);
 
 /**
  * Formats the name of a month centered on ColsPerWeek.
+ *
+ * If year is specified, it's included in the generated heading.
  */
-string monthTitle()(Month month)
+string monthTitle()(Month month, Nullable!int year = Nullable!int.init)
 {
-    static immutable string[] monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ];
-    static assert(monthNames.length == 12);
-
     // Determine how many spaces before and after the month name we need to
     // center it over the formatted weeks in the month
-    auto name = monthNames[month - 1];
+    const(char)[] name = monthNames[month - 1];
+    if (!year.isNull) name ~= format(" %d", year);
+
     assert(name.length < ColsPerWeek);
     auto before = (ColsPerWeek - name.length) / 2;
     auto after = ColsPerWeek - name.length - before;
@@ -395,6 +402,8 @@ string monthTitle()(Month month)
 unittest
 {
     assert(monthTitle(Month.jan).length == ColsPerWeek);
+    assert(monthTitle(Month.jan, nullable(1984)).length == ColsPerWeek);
+    assert(monthTitle(Month.jan, nullable(1984)).strip == "January 1984");
 }
 
 
@@ -434,13 +443,13 @@ unittest
  *  monthDays = A range of Dates representing consecutive days in a month.
  * Returns: A range of strings representing each line of the formatted month.
  */
-auto formatMonth(Range)(Range monthDays)
+auto formatMonth(Range)(Range monthDays, Nullable!int year = Nullable!int.init)
     if (isInputRange!Range && is(ElementType!Range == Date))
     in (!monthDays.empty)
     in (monthDays.front.day == 1)
 {
     return chain(
-        [ monthTitle(monthDays.front.month) ],
+        [ monthTitle(monthDays.front.month, year) ],
         [ weekdaysHeader ],
         monthDays.byWeek().formatWeek());
 }
@@ -650,6 +659,45 @@ auto formatYear()(int year, int monthsPerRow)
     );
 }
 
+/**
+ * Parse the input into a month number (1..12). Input can either be the
+ * 3-letter abbreviation of the month or its full name. Month matching is
+ * case-insensitive.
+ *
+ * Returns: The month number from 1 to 12, or 0 if the input does not match any
+ * month name.
+ */
+int parseMonth(string input)
+{
+    import std.uni : icmp;
+    return cast(int)(1 + monthNames
+        .countUntil!((a,b) => a.take(3).icmp(b.take(3)) == 0)(input));
+}
+
+unittest
+{
+    assert(parseMonth("February") == 2);
+    assert(parseMonth("february") == 2);
+    assert(parseMonth("februaRy") == 2);
+    assert(parseMonth("feb") == 2);
+    assert(parseMonth("Feb") == 2);
+    assert(parseMonth("FEB") == 2);
+
+    assert(parseMonth("jan") == 1);
+    assert(parseMonth("Jan") == 1);
+    assert(parseMonth("January") == 1);
+    assert(parseMonth("may") == 5);
+    assert(parseMonth("May") == 5);
+    assert(parseMonth("SEPTemBEr") == 9);
+    assert(parseMonth("october") == 10);
+    assert(parseMonth("Nov") == 11);
+    assert(parseMonth("DEC") == 12);
+    assert(parseMonth("dec") == 12);
+    assert(parseMonth("december") == 12);
+
+    assert(parseMonth("abc") == 0);
+}
+
 
 int main(string[] args)
 {
@@ -659,6 +707,17 @@ int main(string[] args)
     // This is as simple as it gets: parse the year from the command-line:
     if (args.length == 2)
     {
+        if (auto month = parseMonth(args[1]))
+        {
+            // Display a single month only
+            writeln(datesInYear(year).byMonth
+                                     .drop(month - 1)
+                                     .front
+                                     .formatMonth(nullable(year))
+                                     .join("\n"));
+            return 0;
+        }
+
         year = to!int(args[1]);
     }
 
