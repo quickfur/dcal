@@ -324,8 +324,7 @@ auto formatWeek(Range)(Range weeks) pure nothrow
         @property bool empty() { return r.empty; }
 
         string front()
-        out(s) { assert(s.length == ColsPerWeek); }
-        body
+            out(s; s.length == ColsPerWeek)
         {
             auto buf = appender!string();
 
@@ -437,12 +436,8 @@ unittest
  */
 auto formatMonth(Range)(Range monthDays)
     if (isInputRange!Range && is(ElementType!Range == Date))
-in
-{
-    assert(!monthDays.empty);
-    assert(monthDays.front.day == 1);
-}
-body
+    in (!monthDays.empty)
+    in (monthDays.front.day == 1)
 {
     return chain(
         [ monthTitle(monthDays.front.month) ],
