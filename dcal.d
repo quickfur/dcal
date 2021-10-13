@@ -613,7 +613,6 @@ static if (__VERSION__ < 2064L)
     }
 }
 
-
 /**
  * Formats a year.
  * Parameters:
@@ -624,8 +623,13 @@ static if (__VERSION__ < 2064L)
 auto formatYear()(int year, int monthsPerRow)
 {
     enum colSpacing = 1;
+    const totalWidth = ColsPerWeek * monthsPerRow +
+                       colSpacing * (monthsPerRow - 1);
 
-    return
+    auto yearStr = format("%d", year);
+    auto heading = format("%*s\n", (totalWidth + yearStr.length)/2, yearStr);
+
+    return heading.chain(
         // Start by generating all dates for the given year
         datesInYear(year)
 
@@ -647,7 +651,8 @@ auto formatYear()(int year, int monthsPerRow)
                  .join("\n"))
 
         // Insert a blank line between each row
-        .join("\n\n");
+        .join("\n\n")
+    );
 }
 
 
