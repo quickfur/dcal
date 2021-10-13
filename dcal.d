@@ -698,32 +698,110 @@ unittest
     assert(parseMonth("abc") == 0);
 }
 
+int printUsage()
+{
+    writefln(
+        "Usage:\n"~
+        "    dcal\n"~
+        "    dcal 1971\n"~
+        "    dcal jan\n"~
+        "    dcal january\n"~
+        "    dcal jan 1971\n"~
+        "    dcal 1971 jan\n"~
+        "    dcal 1971 1"
+    );
+    return 1;
+}
+
+void parseArgs(string[] args, out int year, out int month)
+{
+    // Default year is the one obtained from the current system clock.
+    year = (cast(Date) Clock.currTime).year;
+    month = 0;                  // 0 means display entire year
+
+    if (args.length == 2)   // Single year or single month
+    {
+        month = parseMonth(args[1]);
+        if (month == 0)
+            year = to!int(args[1]);
+    }
+    else if (args.length == 3) // year + month or month + year
+    {
+        month = parseMonth(args[1]);
+        if (month == 0)
+        {
+            // year + month
+            year = to!int(args[1]);
+            month = parseMonth(args[2]);
+            if (month == 0)
+                month = args[2].to!int; // numerical month
+        }
+        else
+        {
+            // month + year
+            year = to!int(args[2]);
+        }
+    }
+    else if (args.length != 1)
+        throw new Exception("Invalid arguments");
+}
+
+unittest
+{
+    int year, month;
+
+    parseArgs([ "dcal" ], year, month);
+    assert(year == (cast(Date) Clock.currTime).year && month == 0);
+
+    parseArgs([ "dcal", "1971" ], year, month);
+    assert(year == 1971 && month == 0);
+
+    parseArgs([ "dcal", "jan" ], year, month);
+    assert(year == (cast(Date) Clock.currTime).year && month == 1);
+
+    parseArgs([ "dcal", "january" ], year, month);
+    assert(year == (cast(Date) Clock.currTime).year && month == 1);
+
+    parseArgs([ "dcal", "jan", "1971" ], year, month);
+    assert(year == 1971 && month == 1);
+
+    parseArgs([ "dcal", "1971", "feb" ], year, month);
+    assert(year == 1971 && month == 2);
+
+    parseArgs([ "dcal", "1971", "3" ], year, month);
+    assert(year == 1971 && month == 3);
+}
 
 int main(string[] args)
 {
-    // Default year is the one obtained from the current system clock.
-    int year = (cast(Date) Clock.currTime).year;
+    int year, month;
 
-    // This is as simple as it gets: parse the year from the command-line:
-    if (args.length == 2)
+    // Parse command-line arguments.
+    try
     {
-        if (auto month = parseMonth(args[1]))
-        {
-            // Display a single month only
-            writeln(datesInYear(year).byMonth
-                                     .drop(month - 1)
-                                     .front
-                                     .formatMonth(nullable(year))
-                                     .join("\n"));
-            return 0;
-        }
-
-        year = to!int(args[1]);
+        parseArgs(args, year, month);
+    }
+    catch (Exception e)
+    {
+        return printUsage();
     }
 
     // Print the calender
     enum MonthsPerRow = 3;
-    writeln(formatYear(year, MonthsPerRow));
+    if (month == 0)
+    {
+        // Print entire year
+        writeln(formatYear(year, MonthsPerRow));
+    }
+    else
+    {
+        // Print single month
+        writeln(datesInYear(year).byMonth
+                                 .drop(month - 1)
+                                 .front
+                                 .formatMonth(nullable(year))
+                                 .join("\n"));
+    }
 
     return 0;
 }
