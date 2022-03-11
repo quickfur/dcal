@@ -336,8 +336,9 @@ auto formatWeek(Range)(Range weeks) pure nothrow
             buf.put(spaces(ColsPerDay * startDay));
 
             // Format each day into its own cell and append to target string.
-            string[] days = map!((Date d) => " %2d".format(d.day))(r.front)
-                           .array;
+            string[] days = r.front
+                             .map!((Date d) => "%*d".format(ColsPerDay, d.day))
+                             .array;
             assert(days.length <= 7 - startDay);
             days.copy(buf);
 
@@ -418,7 +419,7 @@ auto makeWeekdaysHeader()()
 {
     auto weekdayNames = [ "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" ];
     return weekdayNames
-        .map!(s => format(" %.*s", ColsPerDay, s))
+        .map!(s => format("%*s", ColsPerDay, s))
         .join();
 }
 
